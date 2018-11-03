@@ -84,23 +84,25 @@ Task("Test")
             var projectFile = GetFiles($"**\\{kvp.Key}").Single();
 
             foreach (var args in testProjects[kvp.Key])
-            try
             {
-                openCoverSettings.WorkingDirectory = projectFile.GetDirectory();
+                try
+                {
+                    openCoverSettings.WorkingDirectory = projectFile.GetDirectory();
 
-                OpenCover(context => {
+                    OpenCover(context => {
                         context.DotNetCoreTool(
-                          projectPath: projectFile.FullPath,
-                          command: "xunit", 
-                          arguments: $"-noshadow -configuration {configuration} {args}");
+                            projectPath: projectFile.FullPath,
+                            command: "xunit", 
+                            arguments: $"-noshadow -configuration {configuration} {args}");
                     },
                     "opencover.xml",
                     openCoverSettings);
-            }
-            catch(Exception ex)
-            {
-                success = false;
-                Error("There was an error while running the tests", ex);
+                }
+                catch(Exception ex)
+                {
+                    success = false;
+                    Error("There was an error while running the tests", ex);
+                }
             }
         }
  
