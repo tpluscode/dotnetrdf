@@ -9,23 +9,26 @@ var configuration = Argument("Configuration", "Debug");
 
 GitVersion version;
 
+var libraryProjects = GetFiles("./Libraries/**/*.csproj");
+
 Task("CI")
     .IsDependentOn("Pack")
     .IsDependentOn("Codecov").Does(() => {});
 
 Task("Pack")
     .IsDependentOn("Build")
-    .Does(() => {
+    .DoesForEach(libraryProjects, path => {
         var settings = new DotNetCorePackSettings
         {
             Configuration = configuration,
             OutputDirectory = "./nugets/",
-            NoBuild = true
+            NoBuild = true,
+            MSBuildSettings = new DotNetCoreMSBuildSettings()
         };
 
-        settings.MSBuildSettings.Properties["version"].Add(version.NuGetVersion);
+        settings.MSBuildSettings.Properties["version"] = new [] { version.NuGetVersion };
 
-        DotNetCorePack("./Libraries/*", settings);
+        DotNetCorePack(path.FullPath, settings);
     });
 
 Task("GitVersion")

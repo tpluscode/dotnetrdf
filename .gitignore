@@ -16,6 +16,7 @@ UpgradeLog*
 log-file.txt
 Backup/
 Tools/
+nugets/
 
 # Files not to version control
 *.suo
