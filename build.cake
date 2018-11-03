@@ -70,7 +70,7 @@ Task("Test")
             Register = "user",
             ReturnTargetCodeOffset = 0
         }
-        .WithFilter("+[dotnetrdf]*");
+        .WithFilter("+[VDS.RDF]*");
 
         var testProjects = new Dictionary<string, string[]> 
         {
