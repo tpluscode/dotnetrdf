@@ -15,7 +15,7 @@ _UpgradeReport*
 UpgradeLog*
 log-file.txt
 Backup/
-
+Tools/
 
 # Files not to version control
 *.suo
