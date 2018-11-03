@@ -62,6 +62,11 @@ Task("Codecov")
 Task("Test")
     .IsDependentOn("Build")
     .Does(() => {
+        if (FileExists("opencover.xml"))
+        {
+            DeleteFile("opencover.xml");
+        }
+
         var openCoverSettings = new OpenCoverSettings
         {
             OldStyle = true,
@@ -69,42 +74,39 @@ Task("Test")
             MergeByHash = true,
             Register = "user",
             ReturnTargetCodeOffset = 0
-        }
-        .WithFilter("+[VDS.RDF]*");
+        };
 
-        var testProjects = new Dictionary<string, string[]> 
+        var testProjects = new Tuple<string, string>[]
         {
-            { "unittest.csproj", new [] { "-notrait \"Category=explicit\"", "-trait \"Category=fulltext\"" } },
-            { "dotNetRdf.MockServerTests.csproj", new [] { "-notrait \"Category=explicit\"" } },
+            Tuple.Create("unittest.csproj", "-notrait \"Category=explicit\""),
+            Tuple.Create("unittest.csproj", "-trait \"Category=fulltext\""),
+            Tuple.Create("dotNetRdf.MockServerTests.csproj", "-notrait \"Category=explicit\"")
         };
 
         bool success = true;
-        foreach (var kvp in testProjects)
+        foreach (var project in testProjects)
         {
-            var projectFile = GetFiles($"**\\{kvp.Key}").Single();
+            var projectFile = GetFiles($"**\\{project.Item1}").Single();
 
-            foreach (var args in testProjects[kvp.Key])
+            try
             {
-                try
-                {
-                    openCoverSettings.WorkingDirectory = projectFile.GetDirectory();
+                openCoverSettings.WorkingDirectory = projectFile.GetDirectory();
 
-                    OpenCover(context => {
-                        context.DotNetCoreTool(
-                            projectPath: projectFile.FullPath,
-                            command: "xunit", 
-                            arguments: $"-noshadow -configuration {configuration} {args}");
-                    },
-                    "opencover.xml",
-                    openCoverSettings);
-                }
-                catch(Exception ex)
-                {
-                    success = false;
-                    Error("There was an error while running the tests", ex);
-                }
+                OpenCover(context => {
+                    context.DotNetCoreTool(
+                        projectPath: projectFile.FullPath,
+                        command: "xunit", 
+                        arguments: $"-noshadow -configuration {configuration} {project.Item2}");
+                },
+                "opencover.xml",
+                openCoverSettings);
             }
-        }
+            catch(Exception ex)
+            {
+                success = false;
+                Error("There was an error while running the tests", ex);
+            }
+        };
  
         if(success == false)
         {
