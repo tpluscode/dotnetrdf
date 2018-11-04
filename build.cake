@@ -56,7 +56,7 @@ Task("Codecov")
     });
 
 Task("Test")
-    //.IsDependentOn("Build")
+    .IsDependentOn("Build")
     .Does(() => {
         if (FileExists("opencover.xml"))
         {
