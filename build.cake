@@ -64,9 +64,7 @@ Task("Test")
             command: "xunit", 
             arguments: (string)testRun.arguments);
 
-    }).ReportError(ex => {
-         Error("There was an error while running the tests", ex);
-    });
+    }).DeferOnError();
 
 Task("Cover")
     .Does(() => {
@@ -100,9 +98,7 @@ Task("Cover")
             openCoverSettings);
         }
  
-    }).ReportError(ex => {
-         Error("There was an error while running the tests", ex);
-    });;
+    }).DeferOnError();
 
 public IEnumerable<dynamic> GetTests(string framework = null) 
 {
