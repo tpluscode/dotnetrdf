@@ -81,6 +81,7 @@ Task("Test")
         };
 
         bool success = true;
+        int i = 0;
         foreach (var project in testProjects)
         {
             var projectFile = GetFiles($"**\\{project.Item1}").Single();
@@ -93,7 +94,7 @@ Task("Test")
                     context.DotNetCoreTool(
                         projectPath: projectFile.FullPath,
                         command: "xunit", 
-                        arguments: $"-noshadow -configuration {configuration} {project.Item2}");
+                        arguments: $"-noshadow -configuration {configuration} {project.Item2} -xml test-{++i}.xml");
                 },
                 "opencover.xml",
                 openCoverSettings);

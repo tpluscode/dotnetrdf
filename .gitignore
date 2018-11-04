@@ -18,6 +18,7 @@ Backup/
 Tools/
 nugets/
 opencover.xml
+test-*.xml
 
 # Files not to version control
 *.suo
