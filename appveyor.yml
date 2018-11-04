@@ -45,4 +45,4 @@ artifacts:
   - path: 'Build\shfb\Help\dotNetRDFApi.chm'
   - path: 'Build\shfb\Help'
   - path: 'test.log'
-
+  - path: 'opencover.xml'
