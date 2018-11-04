@@ -56,7 +56,7 @@ Task("Codecov")
     });
 
 Task("Test")
-    .IsDependentOn("Build")
+    //.IsDependentOn("Build")
     .Does(() => {
         if (FileExists("opencover.xml"))
         {
@@ -70,7 +70,8 @@ Task("Test")
             MergeByHash = true,
             Register = "user",
             ReturnTargetCodeOffset = 0
-        };
+        }
+        .WithFilter("+[dotNetRDF*]*");
 
         var testProjects = new Tuple<string, string>[]
         {
