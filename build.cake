@@ -11,10 +11,6 @@ GitVersion version;
 
 var libraryProjects = GetFiles("./Libraries/**/*.csproj");
 
-Task("CI")
-    .IsDependentOn("Pack")
-    .IsDependentOn("Codecov").Does(() => {});
-
 Task("Pack")
     .IsDependentOn("Build")
     .DoesForEach(libraryProjects, path => {
