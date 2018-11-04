@@ -17,7 +17,7 @@ install:
 configuration: Release
 
 build_script:
-  - ps: ./build.ps1 -Target Pack -Verbosity Verbose -configuration Release
+  - ps: ./build.ps1 -Target Pack -Verbosity Diagnostic -configuration Release
 
 test_script:
   - ps: ./build.ps1 -Target Codecov -Verbosity Verbose -configuration Release *> test.log
