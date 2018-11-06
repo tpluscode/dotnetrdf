@@ -104,8 +104,8 @@ public IEnumerable<dynamic> GetTests(string framework = null)
     var testProjects = new dynamic[]
     {
         new { name = "unittest.csproj", arguments = "-trait Category=fulltext" },
-        //new { name = "unittest.csproj", arguments = "-notrait Category=explicit" },
-        //new { name = "dotNetRdf.MockServerTests.csproj", arguments = "-notrait Category=explicit" }
+        new { name = "unittest.csproj", arguments = "-notrait Category=explicit" },
+        new { name = "dotNetRdf.MockServerTests.csproj", arguments = "-notrait Category=explicit" }
     };
 
     foreach (var project in testProjects)
