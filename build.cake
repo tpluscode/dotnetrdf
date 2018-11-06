@@ -66,7 +66,7 @@ Task("Test")
         
         throw new Exception("Simulate test fail");
 
-    }).ContinueOnError();
+    }).DeferOnError();
 
 Task("Cover")
     .Does(() => {
@@ -85,7 +85,6 @@ Task("Cover")
         }
         .WithFilter("+[dotNetRDF*]*");
         
-        bool success = true;
         foreach(var testRun in GetTests("net452"))
         {           
             openCoverSettings.WorkingDirectory = testRun.projectFile.GetDirectory();
