@@ -64,7 +64,7 @@ Task("Test")
             command: "xunit", 
             arguments: (string)testRun.arguments);
 
-    }).ContinueOnError();
+    }).DeferOnError();
 
 Task("Cover")
     .Does(() => {
@@ -83,7 +83,6 @@ Task("Cover")
         }
         .WithFilter("+[dotNetRDF*]*");
         
-        bool success = true;
         foreach(var testRun in GetTests("net452"))
         {           
             openCoverSettings.WorkingDirectory = testRun.projectFile.GetDirectory();
@@ -98,7 +97,7 @@ Task("Cover")
             openCoverSettings);
         }
  
-    }).ContinueOnError();
+    });
 
 public IEnumerable<dynamic> GetTests(string framework = null) 
 {

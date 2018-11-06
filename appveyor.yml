@@ -24,7 +24,7 @@ test_script:
 
 before_deploy:
   - cmd: msbuild Build\shfb\dotnetrdf.shfbproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /p:Configuration=%CONFIGURATION% /p:HelpFileVersion=%GitVersion_NuGetVersion%
-      
+
 deploy:
   - provider: GitHub
     description: 'dotNetRDF $(GitVersion_SemVer)'
@@ -46,3 +46,6 @@ artifacts:
   - path: 'Build\shfb\Help'
   - path: 'test.log'
   - path: 'opencover.xml'
+
+on_finish:
+  - ps: Push-AppveyorArtifact 'test.log'
