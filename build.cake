@@ -100,7 +100,7 @@ Task("Cover")
             openCoverSettings);
         }
  
-    }).ContinueOnError();
+    });
 
 public IEnumerable<dynamic> GetTests(string framework = null) 
 {
