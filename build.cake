@@ -63,8 +63,6 @@ Task("Test")
             projectPath: (string)testRun.projectFile.FullPath,
             command: "xunit", 
             arguments: (string)testRun.arguments);
-        
-        throw new Exception("Simulate test fail");
 
     }).DeferOnError();
 
