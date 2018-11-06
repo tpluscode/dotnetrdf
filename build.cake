@@ -64,7 +64,7 @@ Task("Test")
             command: "xunit", 
             arguments: (string)testRun.arguments);
 
-    }).DeferOnError();
+    }).ContinueOnError();
 
 Task("Cover")
     .Does(() => {
@@ -98,7 +98,7 @@ Task("Cover")
             openCoverSettings);
         }
  
-    }).DeferOnError();
+    }).ContinueOnError();
 
 public IEnumerable<dynamic> GetTests(string framework = null) 
 {
