@@ -24,11 +24,6 @@ test_script:
 
 before_deploy:
   - cmd: msbuild Build\shfb\dotnetrdf.shfbproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /p:Configuration=%CONFIGURATION% /p:HelpFileVersion=%GitVersion_NuGetVersion%
-  - ps: Push-AppveyorArtifact 'nugets\*.nupkg'
-  - ps: Push-AppveyorArtifact 'Build\shfb\Help\dotNetRDFApi.chm'
-  - ps: Push-AppveyorArtifact 'Build\shfb\Help'
-  - ps: Push-AppveyorArtifact 'test.log'
-  - ps: Push-AppveyorArtifact 'opencover.xml'
 
 deploy:
   - provider: GitHub
@@ -44,3 +39,14 @@ deploy:
     on:
       appveyor_repo_tag: true 
     artifact: /((?!Spin).)*.nupkg/
+
+artifacts:
+  - path: 'nugets\*.nupkg'
+  - path: 'Build\shfb\Help\dotNetRDFApi.chm'
+  - path: 'Build\shfb\Help'
+  - path: 'test.log'
+  - path: 'opencover.xml'
+
+on_finish:
+  - ps: Push-AppveyorArtifact 'test.log'
+  - ps: Push-AppveyorArtifact 'opencover.xml'
