@@ -49,4 +49,3 @@ artifacts:
 
 on_finish:
   - ps: Push-AppveyorArtifact 'test.log'
-  - ps: Push-AppveyorArtifact 'opencover.xml'
