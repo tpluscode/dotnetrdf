@@ -20,7 +20,8 @@ build_script:
   - ps: ./build.ps1 -Target Pack -Verbosity Diagnostic -configuration Release
 
 test_script:
-  - ps: ./build.ps1 -Target Codecov -Verbosity Verbose -configuration Release *> test.log
+  - ps: ./build.ps1 -Target Test -Verbosity Verbose -configuration Release *> test.log
+  - ps: ./build.ps1 -Target Codecov -Verbosity Verbose -configuration Release *> $null
 
 before_deploy:
   - cmd: msbuild Build\shfb\dotnetrdf.shfbproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /p:Configuration=%CONFIGURATION% /p:HelpFileVersion=%GitVersion_NuGetVersion%
