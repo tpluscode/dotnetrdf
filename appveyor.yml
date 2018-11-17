@@ -20,7 +20,8 @@ build_script:
   - ps: ./build.ps1 -Target Pack -Verbosity Diagnostic -configuration Release
 
 test_script:
-  - ps: ./build.ps1 -Target Codecov -Verbosity Verbose -configuration Release *> test.log
+  - ps: ./build.ps1 -Target Cover -Verbosity Verbose -configuration Release *> test.log
+  - ps: ./build.ps1 -Target Codecov -Verbosity Verbose -configuration=Release -no-build=true
 
 before_deploy:
   - cmd: msbuild Build\shfb\dotnetrdf.shfbproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /p:Configuration=%CONFIGURATION% /p:HelpFileVersion=%GitVersion_NuGetVersion%
@@ -44,6 +45,7 @@ artifacts:
   - path: 'nugets\*.nupkg'
   - path: 'Build\shfb\Help\dotNetRDFApi.chm'
   - path: 'Build\shfb\Help'
+  - path: 'opencover.xml'
 
 on_finish:
   - ps: Push-AppveyorArtifact 'test.log'

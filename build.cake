@@ -1,8 +1,11 @@
-#tool nuget:?package=OpenCover
 #tool nuget:?package=codecov
 #tool nuget:?package=gitlink
 #tool nuget:?package=GitVersion.CommandLine&prerelease
 #addin nuget:?package=Cake.Codecov
+#tool "nuget:?package=Microsoft.TestPlatform&version=15.7.0"
+#tool "nuget:?package=xunit.runner.console"
+#tool "nuget:?package=JetBrains.dotCover.CommandLineTools"
+#tool "nuget:?package=ReportGenerator"
 
 var target = Argument("target", "Build");
 var configuration = Argument("Configuration", "Debug");
@@ -50,56 +53,81 @@ Task("Build")
     });
 
 Task("Codecov")
-    .IsDependentOn("Test")
-    .IsDependentOn("Cover")
     .Does(() => {
-        Codecov("opencover.xml");
+        Codecov("coverage\\cobertura.xml");
     });
 
-Task("Test")
-    .DoesForEach(GetTests(), testRun => {
-
+Task("TestNet452")
+    .DoesForEach(GetTests("net452"), testRun => {
         DotNetCoreTool(
             projectPath: (string)testRun.projectFile.FullPath,
             command: "xunit", 
             arguments: (string)testRun.arguments);
+    })
+    .ContinueOnError();
 
-    }).DeferOnError();
+Task("TestNetCore20")
+    .DoesForEach(GetTests("netcoreapp2.0"), testRun => {
+        DotNetCoreTool(
+            projectPath: (string)testRun.projectFile.FullPath,
+            command: "xunit", 
+            arguments: (string)testRun.arguments);
+    })
+    .ContinueOnError();
+
+Task("TestNetCore11")
+    .DoesForEach(GetTests("netcoreapp1.1"), testRun => {
+        DotNetCoreTool(
+            projectPath: (string)testRun.projectFile.FullPath,
+            command: "xunit", 
+            arguments: (string)testRun.arguments);
+    })
+    .ContinueOnError();
+
+Task("Test")
+    .IsDependentOn("TestNet452")
+    .IsDependentOn("TestNetCore20")
+    .IsDependentOn("TestNetCore11")
+    .Does(() => { });
 
 Task("Cover")
+    .IsDependentOn("TestNetCore20")
+    .IsDependentOn("TestNetCore11")
     .Does(() => {
-        if (FileExists("opencover.xml"))
-        {
-            DeleteFile("opencover.xml");
-        }
-
-        var openCoverSettings = new OpenCoverSettings
-        {
-            MergeOutput = true,
-            MergeByHash = true,
-            Register = "user",
-            ReturnTargetCodeOffset = 0,
-            SkipAutoProps = true
-        }
-        .WithFilter("+[dotNetRDF*]*");
-        
+        if (DirectoryExists("coverage"))
+            CleanDirectories("coverage");
+    })
+    .Does(() => {        
         foreach(var testRun in GetTests("net452"))
         {           
-            openCoverSettings.WorkingDirectory = testRun.projectFile.GetDirectory();
+            var xunitSettings = new XUnit2Settings
+                  {
+                     ShadowCopy = false
+                  }
+                  .ExcludeTrait("Category", new [] { "Explicit" });
 
-            OpenCover(context => {
-                context.DotNetCoreTool(
-                    projectPath: (string)testRun.projectFile.FullPath,
-                    command: "xunit", 
-                    arguments: (string)testRun.arguments);
+            DotCoverAnalyse(context => {
+                context.XUnit2(
+                  $@"Testing\unittest\bin\Debug\net452\dotNetRDF.Test.dll",
+                  xunitSettings);
             },
-            "opencover.xml",
-            openCoverSettings);
+            "./dotcover.xml",
+            new DotCoverAnalyseSettings {
+                ReportType = DotCoverReportType.DetailedXML,
+            }
+            .WithFilter("-xunit*")
+            .WithFilter("-dotnetrdf.test")
+            .WithFilter("-dotNetRDF.MockServerTests"));
         }
- 
-    });
+    })
+    .Does(() => {
+        StartProcess(
+          @".\tools\ReportGenerator.4.0.4\tools\net47\ReportGenerator.exe",
+          @" -reports:.\dotcover.xml -targetdir:.\coverage -reporttypes:Cobertura -assemblyfilters:-xunit*;-dotNetRDF.Test");
+    })
+    .DeferOnError();
 
-public IEnumerable<dynamic> GetTests(string framework = null) 
+public IEnumerable<dynamic> GetTests(params string[] frameworks) 
 {
     var testProjects = new dynamic[]
     {
@@ -110,15 +138,13 @@ public IEnumerable<dynamic> GetTests(string framework = null)
 
     foreach (var project in testProjects)
     {
-        var arguments = $"-noshadow -configuration {configuration} {project.arguments}";
-        var projectFile = GetFiles($"**\\{project.name}").Single();
-
-        if (framework != null)
+        foreach(var framework in frameworks)
         {
-            arguments += $" -framework {framework}";
+            var arguments = $"-noshadow -configuration {configuration} {project.arguments} -framework {framework}";
+            var projectFile = GetFiles($"**\\{project.name}").Single();
+
+            yield return new { projectFile, arguments };
         }
-         
-        yield return new { projectFile, arguments };
     }
 }
 
