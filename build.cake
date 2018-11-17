@@ -31,18 +31,10 @@ Task("Pack")
     });
 
 Task("GitVersion")
-    .WithCriteria(BuildSystem.IsLocalBuild)
     .Does(() => {
         version = GitVersion(new GitVersionSettings {
             UpdateAssemblyInfo = true,
         });
-
-        if (BuildSystem.IsLocalBuild == false) 
-        {
-            GitVersion(new GitVersionSettings {
-                OutputType = GitVersionOutput.BuildServer
-            });
-        }
     });
 
 Task("Build")
