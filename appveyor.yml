@@ -10,6 +10,7 @@ environment:
   SandCastleUri: https://github.com/EWSoftware/SHFB/releases/download/v2017.1.28.0/SHFBInstaller_v20171.28.0.zip
   
 install:
+  - choco install gitversion.portable -pre -y
   - ps: Start-FileDownload $env:SandCastleUri -FileName $env:SandCastleZipFile
   - cmd: 7z x SHFBInstaller.zip -y
   - ps: msiexec /i InstallResources\SandcastleHelpFileBuilder.msi /quiet /qn /norestart /log install.log
@@ -17,6 +18,7 @@ install:
 configuration: Release
 
 build_script:
+  - ps: gitversion /l console /output buildserver /updateassemblyinfo
   - ps: ./build.ps1 -Target Pack -Verbosity Diagnostic -configuration Release
 
 test_script:
