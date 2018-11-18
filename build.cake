@@ -92,7 +92,8 @@ Task("Cover")
         StartProcess(
           @".\tools\ReportGenerator.4.0.4\tools\net47\ReportGenerator.exe",
           @"-reports:.\dotcover.xml -targetdir:.\coverage -reporttypes:Cobertura -assemblyfilters:-xunit*;-dotNetRDF.*Test");
-    });
+    })
+    .DeferOnError();
 
 public Action<ICakeContext> RunTests(FilePath project, string framework)
 {
