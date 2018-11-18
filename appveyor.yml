@@ -22,7 +22,7 @@ build_script:
   - ps: ./build.ps1 -Target Pack --configuration=Release --NuGetVersion=$env:GitVersion_NuGetVersion
 
 test_script:
-  - ps: ./build.ps1 -Target Cover --configuration=Release
+  - ps: ./build.ps1 -Target Cover --configuration=Release *> test.log
   - ps: ./build.ps1 -Target Codecov --configuration=Release -no-build=true
 
 before_deploy:
