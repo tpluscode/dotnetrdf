@@ -9,8 +9,7 @@
 
 var target = Argument("target", "Build");
 var configuration = Argument("Configuration", "Debug");
-
-GitVersion version;
+var version = Argument("NuGetVersion", "");
 
 var libraryProjects = GetFiles("./Libraries/**/*.csproj");
 
@@ -25,16 +24,17 @@ Task("Pack")
             MSBuildSettings = new DotNetCoreMSBuildSettings()
         };
 
-        settings.MSBuildSettings.Properties["version"] = new [] { version.NuGetVersion };
+        settings.MSBuildSettings.Properties["version"] = new [] { version };
 
         DotNetCorePack(path.FullPath, settings);
     });
 
 Task("GitVersion")
+    .WithCriteria(BuildSystem.IsLocalBuild && string.IsNullOrWhiteSpace(version))
     .Does(() => {
         version = GitVersion(new GitVersionSettings {
             UpdateAssemblyInfo = true,
-        });
+        }).NuGetVersion;
     });
 
 Task("Build")

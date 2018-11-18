@@ -19,11 +19,11 @@ configuration: Release
 
 build_script:
   - ps: gitversion /l console /output buildserver /updateassemblyinfo
-  - ps: ./build.ps1 -Target Pack -Verbosity Diagnostic -configuration Release
+  - ps: ./build.ps1 -Target Pack -Verbosity Diagnostic --configuration=Release --NuGetVersion=$env:GitVersion_NuGetVersion
 
 test_script:
-  - ps: ./build.ps1 -Target Cover -Verbosity Verbose -configuration Release *> test.log
-  - ps: ./build.ps1 -Target Codecov -Verbosity Verbose -configuration=Release -no-build=true
+  - ps: ./build.ps1 -Target Cover -Verbosity Verbose --configuration=Release *> test.log
+  - ps: ./build.ps1 -Target Codecov -Verbosity Verbose --configuration=Release -no-build=true
 
 before_deploy:
   - cmd: msbuild Build\shfb\dotnetrdf.shfbproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /p:Configuration=%CONFIGURATION% /p:HelpFileVersion=%GitVersion_NuGetVersion%
