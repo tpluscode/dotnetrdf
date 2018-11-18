@@ -53,6 +53,7 @@ Task("Codecov")
 Task("TestNet452")
     .IsDependentOn("Build")
     .Does(RunTests(unitTests, "net452"))
+    .Does(RunTests(unitTests, "net452", "Category=fulltext"))
     .Does(RunTests(mockServerTests, "net452"))
     .ContinueOnError();
 
@@ -80,30 +81,44 @@ Task("Cover")
         if (DirectoryExists("coverage"))
             CleanDirectories("coverage");
     })
+    .Does(DotCover("net452", RunTests(unitTests, "net452")))
+    .Does(DotCover("fulltext", RunTests(unitTests, "net452", "Category=fulltext")))
+    .Does(() => {
+        DotCoverMerge(GetFiles("coverage\\*.dcvr"), "coverage\\merged.dcvr");
+    })
     .Does(() => {        
-        DotCoverAnalyse(
-          RunTests(unitTests, "net452"),
-          "./dotcover.xml",
-          new DotCoverAnalyseSettings {
+        DotCoverReport(
+          "./coverage/merged.dcvr",
+          "./coverage/dotcover.xml",
+          new DotCoverReportSettings {
             ReportType = DotCoverReportType.DetailedXML,
           });
     })
     .Does(() => {
         StartProcess(
           @".\tools\ReportGenerator.4.0.4\tools\net47\ReportGenerator.exe",
-          @"-reports:.\dotcover.xml -targetdir:.\coverage -reporttypes:Cobertura -assemblyfilters:-xunit*;-dotNetRDF.*Test");
+          @"-reports:.\coverage\dotcover.xml -targetdir:.\coverage -reporttypes:Cobertura -assemblyfilters:-xunit*;-dotNetRDF.*Test");
     })
     .DeferOnError();
 
-public Action<ICakeContext> RunTests(FilePath project, string framework)
+public Action<ICakeContext> DotCover(string name, Action<ICakeContext> unitTestRun)
+{
+    return (ICakeContext c) =>
+        DotCoverCover(
+            unitTestRun,
+            $"./coverage/{name}.dcvr",
+            new DotCoverCoverSettings());
+}
+
+public Action<ICakeContext> RunTests(FilePath project, string framework, string filter = "Category!=explicit")
 {
     return (ICakeContext ctx) => 
         ctx.DotNetCoreTest(project.FullPath, new DotNetCoreTestSettings
         {
              Configuration = configuration,
              Framework = framework,
-             NoBuild= true,
-             Filter = "Category!=explicit | Category=fulltext"
+             NoBuild = true,
+             Filter = filter
         });
 }
 
