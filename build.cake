@@ -2,8 +2,6 @@
 #tool nuget:?package=gitlink
 #tool nuget:?package=GitVersion.CommandLine&prerelease
 #addin nuget:?package=Cake.Codecov
-#tool "nuget:?package=Microsoft.TestPlatform&version=15.7.0"
-#tool "nuget:?package=xunit.runner.console"
 #tool "nuget:?package=JetBrains.dotCover.CommandLineTools"
 #tool "nuget:?package=ReportGenerator"
 
@@ -12,6 +10,8 @@ var configuration = Argument("Configuration", "Debug");
 var version = Argument("NuGetVersion", "");
 
 var libraryProjects = GetFiles("./Libraries/**/*.csproj");
+var unitTests = GetFiles("**\\unittest.csproj").Single();
+var mockServerTests = GetFiles("**\\dotNetRdf.MockServerTests.csproj").Single();
 
 Task("Pack")
     .IsDependentOn("Build")
@@ -51,30 +51,20 @@ Task("Codecov")
     });
 
 Task("TestNet452")
-    .DoesForEach(GetTests("net452"), testRun => {
-        DotNetCoreTool(
-            projectPath: (string)testRun.projectFile.FullPath,
-            command: "xunit", 
-            arguments: (string)testRun.arguments);
-    })
+    .IsDependentOn("Build")
+    .Does(RunTests(unitTests, "net452"))
+    .Does(RunTests(mockServerTests, "net452"))
     .ContinueOnError();
 
 Task("TestNetCore20")
-    .DoesForEach(GetTests("netcoreapp2.0"), testRun => {
-        DotNetCoreTool(
-            projectPath: (string)testRun.projectFile.FullPath,
-            command: "xunit", 
-            arguments: (string)testRun.arguments);
-    })
+    .IsDependentOn("Build")
+    .Does(RunTests(unitTests, "netcoreapp2.0"))
     .ContinueOnError();
 
 Task("TestNetCore11")
-    .DoesForEach(GetTests("netcoreapp1.1"), testRun => {
-        DotNetCoreTool(
-            projectPath: (string)testRun.projectFile.FullPath,
-            command: "xunit", 
-            arguments: (string)testRun.arguments);
-    })
+    .IsDependentOn("Build")
+    .Does(RunTests(unitTests, "netcoreapp1.1"))
+    .Does(RunTests(mockServerTests, "netcoreapp1.1"))
     .ContinueOnError();
 
 Task("Test")
@@ -91,54 +81,29 @@ Task("Cover")
             CleanDirectories("coverage");
     })
     .Does(() => {        
-        foreach(var testRun in GetTests("net452"))
-        {           
-            var xunitSettings = new XUnit2Settings
-                  {
-                     ShadowCopy = false
-                  }
-                  .ExcludeTrait("Category", new [] { "Explicit" });
-
-            DotCoverAnalyse(context => {
-                context.XUnit2(
-                  $@"Testing\unittest\bin\Debug\net452\dotNetRDF.Test.dll",
-                  xunitSettings);
-            },
-            "./dotcover.xml",
-            new DotCoverAnalyseSettings {
-                ReportType = DotCoverReportType.DetailedXML,
-            }
-            .WithFilter("-xunit*")
-            .WithFilter("-dotnetrdf.test")
-            .WithFilter("-dotNetRDF.MockServerTests"));
-        }
+        DotCoverAnalyse(
+          RunTests(unitTests, "net452"),
+          "./dotcover.xml",
+          new DotCoverAnalyseSettings {
+            ReportType = DotCoverReportType.DetailedXML,
+          });
     })
     .Does(() => {
         StartProcess(
           @".\tools\ReportGenerator.4.0.4\tools\net47\ReportGenerator.exe",
-          @" -reports:.\dotcover.xml -targetdir:.\coverage -reporttypes:Cobertura -assemblyfilters:-xunit*;-dotNetRDF.Test");
-    })
-    .DeferOnError();
+          @"-reports:.\dotcover.xml -targetdir:.\coverage -reporttypes:Cobertura -assemblyfilters:-xunit*;-dotNetRDF.*Test");
+    });
 
-public IEnumerable<dynamic> GetTests(params string[] frameworks) 
+public Action<ICakeContext> RunTests(FilePath project, string framework)
 {
-    var testProjects = new dynamic[]
-    {
-        new { name = "unittest.csproj", arguments = "-trait Category=fulltext" },
-        new { name = "unittest.csproj", arguments = "-notrait Category=explicit" },
-        new { name = "dotNetRdf.MockServerTests.csproj", arguments = "-notrait Category=explicit" }
-    };
-
-    foreach (var project in testProjects)
-    {
-        foreach(var framework in frameworks)
+    return (ICakeContext ctx) => 
+        ctx.DotNetCoreTest(project.FullPath, new DotNetCoreTestSettings
         {
-            var arguments = $"-noshadow -configuration {configuration} {project.arguments} -framework {framework}";
-            var projectFile = GetFiles($"**\\{project.name}").Single();
-
-            yield return new { projectFile, arguments };
-        }
-    }
+             Configuration = configuration,
+             Framework = framework,
+             NoBuild= true,
+             Filter = "Category!=explicit | Category=fulltext"
+        });
 }
 
 RunTarget(target);
