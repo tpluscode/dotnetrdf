@@ -17,8 +17,9 @@ log-file.txt
 Backup/
 Tools/
 nugets/
-opencover.xml
+coverage
 test-*.xml
+dotcover.xml
 
 # Files not to version control
 *.suo

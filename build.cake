@@ -1,15 +1,17 @@
-#tool nuget:?package=OpenCover
 #tool nuget:?package=codecov
 #tool nuget:?package=gitlink
 #tool nuget:?package=GitVersion.CommandLine&prerelease
 #addin nuget:?package=Cake.Codecov
+#tool "nuget:?package=JetBrains.dotCover.CommandLineTools"
+#tool "nuget:?package=ReportGenerator"
 
 var target = Argument("target", "Build");
 var configuration = Argument("Configuration", "Debug");
-
-GitVersion version;
+var version = Argument("NuGetVersion", "");
 
 var libraryProjects = GetFiles("./Libraries/**/*.csproj");
+var unitTests = GetFiles("**\\unittest.csproj").Single();
+var mockServerTests = GetFiles("**\\dotNetRdf.MockServerTests.csproj").Single();
 
 Task("Pack")
     .IsDependentOn("Build")
@@ -22,23 +24,17 @@ Task("Pack")
             MSBuildSettings = new DotNetCoreMSBuildSettings()
         };
 
-        settings.MSBuildSettings.Properties["version"] = new [] { version.NuGetVersion };
+        settings.MSBuildSettings.Properties["version"] = new [] { version };
 
         DotNetCorePack(path.FullPath, settings);
     });
 
 Task("GitVersion")
+    .WithCriteria(BuildSystem.IsLocalBuild && string.IsNullOrWhiteSpace(version))
     .Does(() => {
         version = GitVersion(new GitVersionSettings {
             UpdateAssemblyInfo = true,
-        });
-
-        if (BuildSystem.IsLocalBuild == false) 
-        {
-            GitVersion(new GitVersionSettings {
-                OutputType = GitVersionOutput.BuildServer
-            });
-        }
+        }).NuGetVersion;
     });
 
 Task("Build")
@@ -50,76 +46,80 @@ Task("Build")
     });
 
 Task("Codecov")
-    .IsDependentOn("Test")
-    .IsDependentOn("Cover")
     .Does(() => {
-        Codecov("opencover.xml");
+        Codecov("coverage\\cobertura.xml");
     });
+
+Task("TestNet452")
+    .IsDependentOn("Build")
+    .Does(RunTests(unitTests, "net452"))
+    .Does(RunTests(unitTests, "net452", "Category=fulltext"))
+    .Does(RunTests(mockServerTests, "net452"))
+    .ContinueOnError();
+
+Task("TestNetCore20")
+    .IsDependentOn("Build")
+    .Does(RunTests(unitTests, "netcoreapp2.0"))
+    .ContinueOnError();
+
+Task("TestNetCore11")
+    .IsDependentOn("Build")
+    .Does(RunTests(unitTests, "netcoreapp1.1"))
+    .Does(RunTests(mockServerTests, "netcoreapp1.1"))
+    .ContinueOnError();
 
 Task("Test")
-    .DoesForEach(GetTests(), testRun => {
-
-        DotNetCoreTool(
-            projectPath: (string)testRun.projectFile.FullPath,
-            command: "xunit", 
-            arguments: (string)testRun.arguments);
-
-    }).DeferOnError();
+    .IsDependentOn("TestNet452")
+    .IsDependentOn("TestNetCore20")
+    .IsDependentOn("TestNetCore11")
+    .Does(() => { });
 
 Task("Cover")
+    .IsDependentOn("TestNetCore20")
+    .IsDependentOn("TestNetCore11")
     .Does(() => {
-        if (FileExists("opencover.xml"))
-        {
-            DeleteFile("opencover.xml");
-        }
+        if (DirectoryExists("coverage"))
+            CleanDirectories("coverage");
+    })
+    .Does(DotCover("net452", RunTests(unitTests, "net452")))
+    .Does(DotCover("fulltext", RunTests(unitTests, "net452", "Category=fulltext")))
+    .Does(() => {
+        DotCoverMerge(GetFiles("coverage\\*.dcvr"), "coverage\\merged.dcvr");
+    })
+    .Does(() => {        
+        DotCoverReport(
+          "./coverage/merged.dcvr",
+          "./coverage/dotcover.xml",
+          new DotCoverReportSettings {
+            ReportType = DotCoverReportType.DetailedXML,
+          });
+    })
+    .Does(() => {
+        StartProcess(
+          @".\tools\ReportGenerator.4.0.4\tools\net47\ReportGenerator.exe",
+          @"-reports:.\coverage\dotcover.xml -targetdir:.\coverage -reporttypes:Cobertura -assemblyfilters:-xunit*;-dotNetRDF.*Test");
+    })
+    .DeferOnError();
 
-        var openCoverSettings = new OpenCoverSettings
-        {
-            MergeOutput = true,
-            MergeByHash = true,
-            Register = "user",
-            ReturnTargetCodeOffset = 0,
-            SkipAutoProps = true
-        }
-        .WithFilter("+[dotNetRDF*]*");
-        
-        foreach(var testRun in GetTests("net452"))
-        {           
-            openCoverSettings.WorkingDirectory = testRun.projectFile.GetDirectory();
-
-            OpenCover(context => {
-                context.DotNetCoreTool(
-                    projectPath: (string)testRun.projectFile.FullPath,
-                    command: "xunit", 
-                    arguments: (string)testRun.arguments);
-            },
-            "opencover.xml",
-            openCoverSettings);
-        }
- 
-    });
-
-public IEnumerable<dynamic> GetTests(string framework = null) 
+public Action<ICakeContext> DotCover(string name, Action<ICakeContext> unitTestRun)
 {
-    var testProjects = new dynamic[]
-    {
-        new { name = "unittest.csproj", arguments = "-trait Category=fulltext" },
-        new { name = "unittest.csproj", arguments = "-notrait Category=explicit" },
-        new { name = "dotNetRdf.MockServerTests.csproj", arguments = "-notrait Category=explicit" }
-    };
+    return (ICakeContext c) =>
+        DotCoverCover(
+            unitTestRun,
+            $"./coverage/{name}.dcvr",
+            new DotCoverCoverSettings());
+}
 
-    foreach (var project in testProjects)
-    {
-        var arguments = $"-noshadow -configuration {configuration} {project.arguments}";
-        var projectFile = GetFiles($"**\\{project.name}").Single();
-
-        if (framework != null)
+public Action<ICakeContext> RunTests(FilePath project, string framework, string filter = "Category!=explicit")
+{
+    return (ICakeContext ctx) => 
+        ctx.DotNetCoreTest(project.FullPath, new DotNetCoreTestSettings
         {
-            arguments += $" -framework {framework}";
-        }
-         
-        yield return new { projectFile, arguments };
-    }
+             Configuration = configuration,
+             Framework = framework,
+             NoBuild = true,
+             Filter = filter
+        });
 }
 
 RunTarget(target);

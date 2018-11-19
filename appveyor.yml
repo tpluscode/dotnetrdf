@@ -10,6 +10,7 @@ environment:
   SandCastleUri: https://github.com/EWSoftware/SHFB/releases/download/v2017.1.28.0/SHFBInstaller_v20171.28.0.zip
   
 install:
+  - choco install gitversion.portable -pre -y
   - ps: Start-FileDownload $env:SandCastleUri -FileName $env:SandCastleZipFile
   - cmd: 7z x SHFBInstaller.zip -y
   - ps: msiexec /i InstallResources\SandcastleHelpFileBuilder.msi /quiet /qn /norestart /log install.log
@@ -17,10 +18,12 @@ install:
 configuration: Release
 
 build_script:
-  - ps: ./build.ps1 -Target Pack -Verbosity Diagnostic -configuration Release
+  - ps: gitversion /l console /output buildserver /updateassemblyinfo
+  - ps: ./build.ps1 -Target Pack --configuration=Release --NuGetVersion=$env:GitVersion_NuGetVersion
 
 test_script:
-  - ps: ./build.ps1 -Target Test -Verbosity Verbose -configuration Release *> test.log
+  - ps: ./build.ps1 -Target Cover --configuration=Release *> test.log
+  - ps: ./build.ps1 -Target Codecov --configuration=Release -no-build=true
 
 before_deploy:
   - cmd: msbuild Build\shfb\dotnetrdf.shfbproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" /p:Configuration=%CONFIGURATION% /p:HelpFileVersion=%GitVersion_NuGetVersion%
@@ -44,6 +47,7 @@ artifacts:
   - path: 'nugets\*.nupkg'
   - path: 'Build\shfb\Help\dotNetRDFApi.chm'
   - path: 'Build\shfb\Help'
+  - path: 'opencover.xml'
 
 on_finish:
   - ps: Push-AppveyorArtifact 'test.log'
